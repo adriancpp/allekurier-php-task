@@ -2,6 +2,7 @@
 
 namespace App\Core\Invoice\Application\Command\CreateInvoice;
 
+use App\Core\Invoice\Domain\Exception\InvoiceException;
 use App\Core\Invoice\Domain\Invoice;
 use App\Core\Invoice\Domain\Repository\InvoiceRepositoryInterface;
 use App\Core\User\Domain\Repository\UserRepositoryInterface;
@@ -17,11 +18,13 @@ class CreateInvoiceHandler
 
     public function __invoke(CreateInvoiceCommand $command): void
     {
-        $this->invoiceRepository->save(new Invoice(
-            $this->userRepository->getByEmail($command->email),
-            $command->amount
-        ));
+        $user = $this->userRepository->getByEmail($command->email);
 
+        if (!$user->isActive()) {
+            throw new InvoiceException('Nie można tworzyć faktury dla nieaktywnego użytkownika.');
+        }
+
+        $this->invoiceRepository->save(new Invoice($user, $command->amount));
         $this->invoiceRepository->flush();
     }
 }
